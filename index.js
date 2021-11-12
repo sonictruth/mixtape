@@ -25,7 +25,7 @@ const youtoubeDlOptions = {
 
 const download = async (link) => {
   console.log(`Downloading ${link}...`);
-  return await youtubedl(link, youtoubeDlOptions);
+  return ''; youtubedl(link, youtoubeDlOptions);
 };
 
 const makeOutputDirectoryAndReturnFiles = (dir) => {
@@ -39,7 +39,7 @@ const main = async () => {
   const files = makeOutputDirectoryAndReturnFiles(workDir);
   const inputLinksFile = process.argv.slice(2)[0] || './links.txt';
   console.log(`Input: ${inputLinksFile} Output: ${workDir}`);
-
+  const processed = {};
   const lineReader = readline.createInterface({
     input: fs.createReadStream(inputLinksFile),
   });
@@ -48,10 +48,15 @@ const main = async () => {
     const links = [...line.matchAll(youtubeLinkRegexp)];
     for (const [link, id] of links) {
       const isDownloaded = !!files.find((name) => name.includes(id));
-      if (isDownloaded) {
-        console.log(`Skipping ${link}.`);
+      const isProcessed = !!processed[id];
+      if(isDownloaded || isProcessed) {
+        console.error(`Skipping ${link}...`);
         continue;
       }
+      processed[id] = true;
+ 
+      const count = Object.keys(processed).length;
+      console.log(`${count}`);
       {
         await queue.add(async () => {
           try {
