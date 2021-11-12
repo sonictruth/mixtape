@@ -2,6 +2,7 @@ import youtubedl from 'youtube-dl-exec';
 import fs from 'fs';
 import readline from 'readline';
 import PQueue from 'p-queue';
+import crypto from 'crypto';
 
 const queue = new PQueue({ concurrency: 2 });
 
@@ -20,12 +21,20 @@ const youtoubeDlOptions = {
   metadataFromTitle: '%(artist)s - %(title)s',
   matchTitle: '(official|video|music|-)',
   preferFfmpeg: true,
-  output: `${workDir}/%(title)s[%(id)s].%(ext)s`,
 };
 
-const download = async (link) => {
+const download = async (link, output) => {
   console.log(`Downloading ${link}...`);
-  return youtubedl(link, youtoubeDlOptions);
+  return youtubedl(link, {
+    ...youtoubeDlOptions,
+    output,
+  });
+};
+
+const getHash = (sting) => {
+  const shasum = crypto.createHash('sha1');
+  shasum.update(sting);
+  return shasum.digest('hex').slice(0, 10);
 };
 
 const makeOutputDirectoryAndReturnFiles = (dir) => {
@@ -46,24 +55,28 @@ const main = async () => {
 
   lineReader.on('line', async (line) => {
     const links = [...line.matchAll(youtubeLinkRegexp)];
-    for (const [link, id] of links) {
-      const isDownloaded = !!files.find((name) => name.includes(id));
-      const isProcessed = !!processed[id];
-      if(isDownloaded || isProcessed) {
-        console.error(`Skipping ${link}...`);
+    for (const [link] of links) {
+      const hash = getHash(link);
+      const isDownloaded = !!files.find((name) => name.includes(hash));
+      const isProcessed = !!processed[hash];
+      if (isDownloaded || isProcessed) {
+        console.error(`Skipping ${hash} D:${isDownloaded} P:${isProcessed} ${link}...`);
         continue;
       }
-      processed[id] = true;
- 
+      processed[hash] = true;
+
       const count = Object.keys(processed).length;
       console.log(`${count}`);
       {
         await queue.add(async () => {
           try {
-            await download(id);
+            await download(link, `${workDir}/%(title)s[${hash}].%(ext)s`);
           } catch (error) {
             console.error(`>>> ${link} ${error.stderr}`);
-            fs.writeFileSync(`${workDir}/error_[${id}].txt`, JSON.stringify(error));
+            fs.writeFileSync(
+              `${workDir}/error_[${hash}].txt`,
+              `${link} = ${error.stderr}`
+            );
           }
         });
       }
