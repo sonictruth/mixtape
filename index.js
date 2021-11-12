@@ -1,4 +1,4 @@
-import youtubedl from 'youtube-dl-exec';
+import * as ytdl from 'youtube-dl-exec';
 import fs from 'fs';
 import readline from 'readline';
 import PQueue from 'p-queue';
@@ -6,11 +6,15 @@ import crypto from 'crypto';
 
 const queue = new PQueue({ concurrency: 2 });
 
+const ytDownloader = ytdl.default.create('yt-dlp');
+
 const workDir = './output';
 const defaultLinksFile = `./links.txt`;
 const youtubeLinkRegexp =
   /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/gi;
 const youtoubeDlOptions = {
+  userAgent:
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0',
   extractAudio: true,
   noCallHome: true,
   noCheckCertificate: true,
@@ -25,7 +29,7 @@ const youtoubeDlOptions = {
 
 const download = async (link, output) => {
   console.log(`Downloading ${link}...`);
-  return youtubedl(link, {
+  return ytDownloader(link, {
     ...youtoubeDlOptions,
     output,
   });
@@ -60,7 +64,9 @@ const main = async () => {
       const isDownloaded = !!files.find((name) => name.includes(hash));
       const isProcessed = !!processed[hash];
       if (isDownloaded || isProcessed) {
-        console.error(`Skipping ${hash} D:${isDownloaded} P:${isProcessed} ${link}...`);
+        console.error(
+          `Skipping ${hash} D:${isDownloaded} P:${isProcessed} ${link}...`
+        );
         continue;
       }
       processed[hash] = true;
@@ -70,12 +76,12 @@ const main = async () => {
       {
         await queue.add(async () => {
           try {
-            await download(link, `${workDir}/%(title)s[${hash}].%(ext)s`);
+            await download(link, `${workDir}/%(artist)s - %(title)s[${hash}].%(ext)s`);
           } catch (error) {
-            console.error(`>>> ${link} ${error.stderr}`);
+            console.error(`>>> ${link} ${error.stderr} `);
             fs.writeFileSync(
               `${workDir}/error_[${hash}].txt`,
-              `${link} = ${error.stderr}`
+              `${link} = ${error.stderr} ] \n ${JSON.stringify(error,null,1)}`
             );
           }
         });
