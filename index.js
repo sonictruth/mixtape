@@ -2,7 +2,7 @@ const youtubedl = require('youtube-dl-exec');
 const fs = require('fs');
 const readline = require('readline');
 
-const workDir = fs.realpathSync('./output');
+const workDir = './output';
 const defaultLinksFile = `${__dirname}/links.txt`;
 const youtubeLinkRegexp =
   /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/gi;
