@@ -25,7 +25,7 @@ const youtoubeDlOptions = {
 
 const download = async (link) => {
   console.log(`Downloading ${link}...`);
-  return ''; youtubedl(link, youtoubeDlOptions);
+  return youtubedl(link, youtoubeDlOptions);
 };
 
 const makeOutputDirectoryAndReturnFiles = (dir) => {
