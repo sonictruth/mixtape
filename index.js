@@ -1,9 +1,12 @@
-const youtubedl = require('youtube-dl-exec');
-const fs = require('fs');
-const readline = require('readline');
+import youtubedl from 'youtube-dl-exec';
+import fs from 'fs';
+import readline from 'readline';
+import PQueue from 'p-queue';
+
+const queue = new PQueue({ concurrency: 2 });
 
 const workDir = './output';
-const defaultLinksFile = `${__dirname}/links.txt`;
+const defaultLinksFile = `./links.txt`;
 const youtubeLinkRegexp =
   /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/gi;
 const youtoubeDlOptions = {
@@ -13,7 +16,7 @@ const youtoubeDlOptions = {
   addMetadata: true,
   embedThumbnail: true,
   audioFormat: 'mp3',
-  audioQuality: '0',
+  // audioQuality: '0',
   metadataFromTitle: '%(artist)s - %(title)s',
   matchTitle: '(official|video|music|-)',
   preferFfmpeg: true,
@@ -25,15 +28,15 @@ const download = async (link) => {
   return await youtubedl(link, youtoubeDlOptions);
 };
 
-const makeOutputDirectoryAndReturnFiles = () => {
-  if (!fs.existsSync(workDir)) {
-    fs.mkdirSync(workDir);
+const makeOutputDirectoryAndReturnFiles = (dir) => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir);
   }
-  return fs.readdirSync(workDir);
+  return fs.readdirSync(dir);
 };
 
 const main = async () => {
-  const files = makeOutputDirectoryAndReturnFiles();
+  const files = makeOutputDirectoryAndReturnFiles(workDir);
   const inputLinksFile = process.argv.slice(2)[0] || './links.txt';
   console.log(`Input: ${inputLinksFile} Output: ${workDir}`);
 
@@ -50,12 +53,14 @@ const main = async () => {
         continue;
       }
       {
-        try {
-          out = await download(id);
-          console.log(out);
-        } catch (error) {
-          console.error(`>>> ${link} ${error.stderr}`);
-        }
+        await queue.add(async () => {
+          try {
+            await download(id);
+          } catch (error) {
+            console.error(`>>> ${link} ${error.stderr}`);
+            fs.writeFileSync(`${workDir}/error_[${id}].txt`, JSON.stringify(error));
+          }
+        });
       }
     }
   });

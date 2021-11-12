@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "Create mp3s from a generic list of youtube videos",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "p-queue": "^7.1.0",
     "youtube-dl-exec": "^1.3.3"
   }
 }
